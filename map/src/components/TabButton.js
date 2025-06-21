@@ -1,8 +1,11 @@
-/* Tab Button component for setting Hurricane or Daily Forecast view */
+/* 
+Tab Button component for setting Hurricane or Daily Forecast view - does NOT work correctly yet 
+Also just an idea - needs to become smaller & collapsible
+*/
 import '../css/tabbutton.css';
 
 const TabButton = ({HorDF, setHorDF}) => {
-    // On click, we
+    // On click - need to fix not registering click
     const handleClick = (type) => {
         // Debug
         console.log("Tab clicked: ", type);
@@ -12,7 +15,7 @@ const TabButton = ({HorDF, setHorDF}) => {
         // Finding tiff-1 to keep cascading menu style working for now
         const tiff1 = document.getElementById("tiff-1");
         
-        // CHecking if first dropdown element exists in DOM
+        // Checking if first dropdown element exists in DOM
         if (tiff1) {
         tiff1.value = type === 'hurricane' ? 'Hurricane' : 'forecast';
         // Trigger the change event so the DOM manipulation sees tab button function
