@@ -30,6 +30,8 @@ function addDropdowns() {
                         while (tiff5.options.length > 0) {
                             tiff5.remove(0);
                         } // while
+                        // Hiding raster layer dropdown if in hurricane mode
+                        document.getElementById("tiff-6").classList.add("closed-dropdown");
                         // Clear and hide cycle dropdown until user clicks date on calendar
                         document.getElementById("tiff-4").classList.add("closed-dropdown");
                         return;
@@ -213,6 +215,9 @@ function prepareItems() {
         let selectedDate = e.detail.date;
         // Close any open popups
         map.closePopup();
+        // Hide and clear raster layer dropdown on new date selection
+        document.getElementById("tiff-6").classList.add("closed-dropdown");
+        activeRasterLayer = 'water';
 
         // Find all DF match for user selected date - including different DF cycles
         let DFmatches = overLayers.filter(layer => {
@@ -287,14 +292,93 @@ function prepareItems() {
             .openOn(map);
     }); // event-listener 
 
+    // BEFORE CHANGE:
     // Event-listener for time/cycle selection for DF
+    // document.getElementById("tiff-4").addEventListener("change", function() {
+    //     let selectedIndex = this.options[this.selectedIndex].dataset.layerIndex;
+    //     if (selectedIndex) {
+    //         let layer = overLayers[selectedIndex];
+    //         showLayer(layer, false);
+    //     } // if 
+    // }); // event-listener
+    // END BEFORE
+    
+    // Event-listener for time/cycle selection for DF mode
+    // Reset active raster layer dropdown to Peak Water Level & show layer dropdown
     document.getElementById("tiff-4").addEventListener("change", function() {
         let selectedIndex = this.options[this.selectedIndex].dataset.layerIndex;
         if (selectedIndex) {
             let layer = overLayers[selectedIndex];
             showLayer(layer, false);
+
+            // Reset raster layer dropdown
+            const tiff6 = document.getElementById("tiff-6");
+            tiff6.classList.remove("closed-dropdown");
+            activeRasterLayer = 'water';
         } // if 
-    }); // event-listener
+    }); // event-listener for cycle tiff
+
+    // Event-listener for raster layer selection for DF mode
+    document.getElementById("tiff-6").addEventListener("change", async function () {
+        // Ensure only active in Daily Forecast mode
+        if (document.getElementById("tiff-1").value !== "Daily Forecast" || !showing) return;
+
+        const selectedRaster = this.value;
+        activeRasterLayer = selectedRaster;
+        // Always capture before any showLayer call
+        const waterRasterBackup = showing;
+
+        if (selectedRaster === 'wave') {
+            const waveUrl = showing.tiff.waveUrl;
+
+            // Check if wave file actually exists before render
+            try {
+                const check = await fetch(waveUrl, { method: 'HEAD' });
+                if (!check.ok) throw new Error ('Wave file not found');
+            } catch {
+                // Wave file does not exist so reset layer dropdown to water elevation
+                this.value = 'water';
+                activeRasterLayer = 'water';
+                L.popup()
+                    .setLatLng(map.getCenter())
+                    .setContent(`<div style="text-align:center; font-family: Merriweather, serif;">
+                        <strong> Wave Data Unavailable </strong><br>
+                        No wave height data for this date.
+                        </div>`)
+                    .openOn(map);
+                return;
+            } // try-catch
+
+            // Store showLayer before
+            const waterRasterBackup = showing;
+
+            // Mimic object for water elevation level 
+            // Used min 0 and max 20 ?
+            const waveObject = {
+                tiff: {
+                    ...showing.tiff,
+                    url: waveUrl,
+                    min: 0, 
+                    max: 20, 
+                    description: showing.tiff.description,
+                }, 
+                layer: undefined, 
+                rendered: false, 
+                hurricaneLayer: null, 
+            }; // waveObject
+            await showLayer(waterRasterBackup, false);
+            // Fixing legend scale 
+            updateMinMax(0, 20); // Force legend update for wave height raster layer
+        } else {
+            // Change raster layer back to water elevation
+            clickPointObject.file = null;
+            clickPointObject.image = null;
+            clickPointObject.url_to_geotiff_file = waterRasterBackup.tiff.url;
+            await showLayer(waterRasterBackup, false);
+            // Restore water elevation scale in legend
+            updateMinMax(waterRasterBackup.tiff.min, waterRasterBackup.tiff.max);
+        } // if-else
+    }); // event-listener for raster layer tiff
 }
 
 function doNextStep() {

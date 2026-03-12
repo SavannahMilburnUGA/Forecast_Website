@@ -34,6 +34,11 @@ const Sidebar = () => {
                 <select id="tiff-3" className="closed-dropdown tiff-select"></select>
                 <select id="tiff-4" className="closed-dropdown tiff-select"></select>
                 <select id="tiff-5" className="closed-dropdown tiff-select"></select>
+                <select id="tiff-6" className="closed-dropdown tiff-select">
+                    <option value="none" selected disabled hidden> Select </option>
+                    <option value="water"> Peak Water Level </option>
+                    <option value="wave"> Peak Wave Height </option>
+                </select>
             </div>
         </div>
     );

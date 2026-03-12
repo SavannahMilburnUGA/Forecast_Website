@@ -2,6 +2,8 @@
 var map;
 var overLayers = [];
 let count = 0;
+// Setting current raster layer selection to water elevation (default)
+let activeRasterLayer = 'water';
 
 let globalGeo;
 let clickPointObject = {
@@ -56,7 +58,7 @@ async function clickPoint(event, bounds) {
 
     let height = data[0][0];
 
-    if (isNaN(height) || height == -99999) {
+    if (isNaN(height) || height <= -99999 || height > 9e36) {
         //
     } else {
         console.log("User clicked at (" + latlng.lng + "E, " + latlng.lat + "N)\nWater elevation: " + height);
@@ -70,11 +72,16 @@ async function clickPoint(event, bounds) {
             .setContent((() => {
                 // Get the hurricane data if selected
                 let hurricaneItem = showing && showing.tiff && showing.tiff.trackData ? showing.tiff : null;
-                // This is the old/default data displayed: Lat/Long & Water Elevation
-                let bretContent = 
+                // Deriving label & units from activeRasterLayer variable (Water Elevation vs. Wave Height)
+                const isWaveLayer = activeRasterLayer === 'wave';
+                const popupValueLabel = isWaveLayer ? 'Wave Height' : 'Water Elevation';
+                const popupValueUnits = isWaveLayer ? 'ft' : 'ft NAVD88';
+
+                // Dynamic popup data displayed: Lat/Long & either Water Elevation/Wave Height dynamically labeled from activeRasterLayer variable
+                let popupData = 
                     `<span class="popup-label">Location:</span> (${Math.round(100*latlng.lng)/100}, ${Math.round(100*latlng.lat)/100})<br>
-                    <span class="popup-label">Water Elevation:</span> ${Math.round(100*height)/100} ft NAVD88<br>`; // bretContent
-                return bretContent;
+                    <span class="popup-label">${popupValueLabel}</span> ${Math.round(100*height)/100} ${popupValueUnits}<br>`; // popupData
+                return popupData;
             })); // setContent
         popup.addTo(map);
     }
@@ -124,15 +131,31 @@ async function drawFirstTime(inputTiff, customMinMax) {
     // var layer = L.leafletGeotiff(inputTiff.tiff.url, null).addTo(map);
     console.log(georaster)
 
-    if (!clickPointObject.active) {
-        map.on('click', async function(evt) {
-            clickPoint(evt, bounds);
-        });
-    }
+    // Bret code BEFORE: 
+    // if (!clickPointObject.active) {
+    //     map.on('click', async function(evt) {
+    //         clickPoint(evt, bounds);
+    //     });
+    // }
+    // clickPointObject.url_to_geotiff_file = url_to_geotiff_file;
+    // clickPointObject.file = null;
+    // clickPointObject.image = null;
+    // clickPointObject.active = true;
+    // Bret code BEFORE ends
+
+    // NEW LAYER CHANGE STARTS:
+    // Remove previos click listener before adding new listener for each click
+    // Prevents stacking duplicate click handlers/listeners after user clicks map multiple times & layer switches
+    map.off('click');
+    map.on('click', async function (e) {
+        clickPoint(e, bounds);
+    }); // map.on
+
     clickPointObject.url_to_geotiff_file = url_to_geotiff_file;
     clickPointObject.file = null;
     clickPointObject.image = null;
     clickPointObject.active = true;
+    // NEW LAYER CHANGE ENDS
 
     // Add layer to the list for sorting
     inputTiff.rendered = true;

@@ -62,6 +62,8 @@ async function addTifToList(key) {
     let thisAdvisory = {
         "name": getName(data),
         "url": data.waterlevel_gtif_url,
+        // Computing wave URL once at build time for wave height layer
+        "waveUrl": data.waterlevel_gtif_url.replace('maxele.tif', 'swan_HS_max.tif'),
         "hurricaneUrl": "Blank",
         "description": getName(data),
         "min": 0,
