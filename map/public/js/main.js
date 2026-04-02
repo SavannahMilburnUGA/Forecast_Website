@@ -317,6 +317,17 @@ function prepareItems() {
     document.body.addEventListener('noDataPopup', function(e) {
         let selectedDate = e.detail.date;
         let dateStr = selectedDate.toLocaleDateString();
+
+        // Hide and reset tiff-6 for dates without data
+        document.getElementById("tiff-6").classList.add("closed-dropdown");
+        document.getElementById("tiff-6").value = "none";
+        document.getElementById("tiff-4").classList.add("closed-dropdpown");
+        activeRasterLayer = 'water';
+        if (currentWaterLayer) {
+            clickPointObject.file = null;
+            clickPointObject.image = null;
+            clickPointObject.url_to_geotiff_file = currentWaterLayer.tiff.url;
+        } // if 
         
         // Create pop up to inform no DF data available for selected date 
         let center = map.getCenter();
