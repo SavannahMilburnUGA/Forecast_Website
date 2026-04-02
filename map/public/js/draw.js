@@ -1,32 +1,35 @@
-// Global Variables
+// Global variables
 var map;
 var overLayers = [];
-let count = 0;
-// Setting current raster layer selection to water elevation (default)
+let count = 0; // Dead code?
+// Setting current raster layer selection to water elevation - will track which TIF is active for clickPoint() and popup
 let activeRasterLayer = 'water';
 
-let globalGeo;
+let globalGeo; // Dead code? 
+// Single shared object for holding state for click sampling
 let clickPointObject = {
     active: false,
-    url_to_geotiff_file: null,
+    url_to_geotiff_file: null, // current TIF being sampled
     file: null,
     image: null,
     markers: [],
-};
+}; // clickPointObject
 
+// Created Leaflet pane overlay for view + TIF layers above base map + below UI controls
 function addMap() {
     // Pane to make it over the base layers
     map.createPane("overlay");
     map.getPane("overlay").style.zIndex = 2;
     map.zoomControl.setPosition("topright");
     console.log(map);
-}
+} // addMap
 
+// Reading pixel data from GeoTIFF + mouse click
 async function clickPoint(event, bounds) {
-    // Checking
-    console.log("clickPoint fired");
+    // Convert raw DOM mouse event to Leaflet coordinate object
     let latlng = map.mouseEventToLatLng(event.originalEvent);
 
+    // Cache GeoTIFF file + image objects after first click
     let file = clickPointObject.file;
     let image = clickPointObject.image;
     if (clickPointObject.file == null) {
@@ -37,7 +40,8 @@ async function clickPoint(event, bounds) {
         image = await file.getImage();
         clickPointObject.image = image;
     }
-    //
+
+    // Get TIF geographic bounds + pixel dimensions (maxele.tif vs. swan_HS_max.tif)
     const bbox = image.getBoundingBox();
     const pixelWidth = image.getWidth();
     const pixelHeight = image.getHeight();
@@ -58,11 +62,11 @@ async function clickPoint(event, bounds) {
     // Bret code for maxele.tif
     let partX = pixelWidth*(longitude - bbox[0])/(bbox[2] - bbox[0]);
     let partY = pixelHeight*(1 - (latitude - bbox[1])/(bbox[3] - bbox[1]));
-    // End Bret code for maxele.tif
-
+    // End Bret code for maxele.tif - convert geographic coordinates to pixel coordinates
     const xPx = Math.floor(partX + 0.5);
     const yPx = Math.floor(partY + 0.5);
 
+    // Read one pixel from TIF at calculated position
     const data = await image.readRasters({
         window: [xPx, yPx, xPx + 1, yPx + 1],
         width: 1,
@@ -71,10 +75,11 @@ async function clickPoint(event, bounds) {
     });
 
     let height = data[0][0];
-    // Check
+    // Debug check
     console.log("Raw height value:", height);
 
-    if (isNaN(height) || height <= -99999 || height > 9e36) {
+    // Filter no data values (undefined areas, out of TIFs)
+    if (isNaN(height) || height <= -99999) {
         //
     } else {
         // Deriving label & units from activeRasterLayer variable (Water Elevation vs. Wave Height)
@@ -84,7 +89,8 @@ async function clickPoint(event, bounds) {
 
         // Debug for popup
         console.log("User clicked at (" + latlng.lng + "E, " + latlng.lat + "N)\n" + popupValueLabel + ": " + height);
-
+        
+        // Create Leaflet popup at clicked coordinates
         let popup = L.popup([latlng.lat, latlng.lng], { autoPan: false,})
             // Adding more data to pop-up when clicking directly on hurricane markers - will NOT display if not on marker
             .setContent((() => {
@@ -102,12 +108,13 @@ async function clickPoint(event, bounds) {
     }
 }
 
+// Parse GeoTIFF to build raster tiles
 async function drawFirstTime(inputTiff, customMinMax) {
-    // Check
+    // Debug check
     console.log("drawFirstTime called, url:", inputTiff.tiff.url); 
     let url_to_geotiff_file = inputTiff.tiff.url;
     let georaster = await parseGeoraster(url_to_geotiff_file);
-    // Colors height appropriately
+    // Colors height appropriately via mapping pixel value to a color
     function doColors(input) {
         let min = inputTiff.tiff.min;
         let max = inputTiff.tiff.max;
@@ -132,7 +139,7 @@ async function drawFirstTime(inputTiff, customMinMax) {
         }
     }
 
-    // Create the layer
+    // Create the Leaflet raster layer
     var tifLayer = new GeoRasterLayer({
         attribution: "Planet",
         georaster: georaster,
@@ -148,19 +155,6 @@ async function drawFirstTime(inputTiff, customMinMax) {
     // var layer = L.leafletGeotiff(inputTiff.tiff.url, null).addTo(map);
     console.log(georaster)
 
-    // Bret code BEFORE: 
-    // if (!clickPointObject.active) {
-    //     map.on('click', async function(evt) {
-    //         clickPoint(evt, bounds);
-    //     });
-    // }
-    // clickPointObject.url_to_geotiff_file = url_to_geotiff_file;
-    // clickPointObject.file = null;
-    // clickPointObject.image = null;
-    // clickPointObject.active = true;
-    // Bret code BEFORE ends
-
-    // NEW LAYER CHANGE STARTS:
     // Remove previos click listener before adding new listener for each click
     // Prevents stacking duplicate click handlers/listeners after user clicks map multiple times & layer switches
     map.off('click');
@@ -174,14 +168,14 @@ async function drawFirstTime(inputTiff, customMinMax) {
     clickPointObject.active = true;
     // NEW LAYER CHANGE ENDS
 
-    // Add layer to the list for sorting
+    // Add layer to the list for sorting so drawFirstTime() not called again for next selections
     inputTiff.rendered = true;
     if (customMinMax) {
         inputTiff.rendered = false;
     }
 }
 
-// Adds a geotiff object as a layer
+// Adds a GeoTIFF object as a layer - legacy code
 function addTifLayers() {
     addMap();
     let promiseList = [];
