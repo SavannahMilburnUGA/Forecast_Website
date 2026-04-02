@@ -39,6 +39,11 @@ function addDropdowns() {
                         document.getElementById("tiff-4").classList.add("closed-dropdown");
                         return;
                     } // if  
+                    // Hide tiff-6 when switching to Hurricane mode
+                    if (value === "Hurricane") {
+                        document.getElementById("tiff-6").classList.add("closed-dropdown");
+                        activeRasterLayer = 'water';
+                    } // if 
                 } // if 
             } // if
 
@@ -117,7 +122,7 @@ function addDropdowns() {
                 if (i == input.length) {
                     let def = document.createElement("option");
                     def.innerText = "Select";
-                    def.value = "NONE";
+                    def.value = "none";
                     def.selected = true;
                     def.disabled = true;
                     def.hidden = true;
@@ -229,6 +234,7 @@ function prepareItems() {
         map.closePopup();
         // Hide and clear raster layer dropdown on new date selection
         document.getElementById("tiff-6").classList.add("closed-dropdown");
+        document.getElementById("tiff-6").value = "none";
         activeRasterLayer = 'water';
 
         // Find all Daily Forecast layers matching user selected date - including different cycles (00, 06, 12, 18)
@@ -258,7 +264,7 @@ function prepareItems() {
             // Add placeholder for default load on cycle 
             let def = document.createElement("option");
             def.innerText = "Select";
-            def.value = "NONE";
+            def.value = "none";
             def.selected = true;
             def.disabled = true;
             def.hidden = true;
@@ -316,6 +322,7 @@ function prepareItems() {
             // Reset raster layer dropdown
             const tiff6 = document.getElementById("tiff-6");
             tiff6.classList.remove("closed-dropdown");
+            tiff6.value = "none";
             activeRasterLayer = 'water';
         } // if 
     }); // event-listener for cycle tiff-4
