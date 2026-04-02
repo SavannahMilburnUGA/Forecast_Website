@@ -1,5 +1,7 @@
 var started = false;
 let showing;
+// Store water layer at selection time
+let currentWaterLayer = null;
 
 // Loops through tiff-1 to tiff-5 + attach change listeners
 function addDropdowns() {
@@ -42,7 +44,14 @@ function addDropdowns() {
                     // Hide tiff-6 when switching to Hurricane mode
                     if (value === "Hurricane") {
                         document.getElementById("tiff-6").classList.add("closed-dropdown");
+                        document.getElementById("tiff-6").value = "none";
                         activeRasterLayer = 'water';
+                        // Reset click sampling back to maxele.tif
+                        if (currentWaterLayer) {
+                            clickPointObject.file = null;
+                            clickPointObject.image = null;
+                            clickPointObject.url_to_geotiff_file = currentWaterLayer.tiff.url;
+                        } // if
                     } // if 
                 } // if 
             } // if
@@ -236,6 +245,12 @@ function prepareItems() {
         document.getElementById("tiff-6").classList.add("closed-dropdown");
         document.getElementById("tiff-6").value = "none";
         activeRasterLayer = 'water';
+        // Reset click sampling back to maxele.tif
+        if (currentWaterLayer) {
+            clickPointObject.file = null;
+            clickPointObject.image = null;
+            clickPointObject.url_to_geotiff_file = currentWaterLayer.tiff.url;
+        } // if
 
         // Find all Daily Forecast layers matching user selected date - including different cycles (00, 06, 12, 18)
         let DFmatches = overLayers.filter(layer => {
@@ -317,8 +332,14 @@ function prepareItems() {
         let selectedIndex = this.options[this.selectedIndex].dataset.layerIndex;
         if (selectedIndex) {
             let layer = overLayers[selectedIndex];
+            // Store water layer
+            currentWaterLayer = layer;
             showLayer(layer, false);
-
+            // Reset click sampling back to maxele.tif
+            clickPointObject.file = null;
+            clickPointObject.image = null;
+            clickPointObject.url_to_geotiff_file = currentWaterLayer.tiff.url;  
+        
             // Reset raster layer dropdown
             const tiff6 = document.getElementById("tiff-6");
             tiff6.classList.remove("closed-dropdown");
@@ -334,11 +355,10 @@ function prepareItems() {
 
         const selectedRaster = this.value;
         activeRasterLayer = selectedRaster;
-        // Always capture before any showLayer call
-        const waterRasterBackup = showing;
+
         // HEAD request to check if swan_HS_max.tif exists w/o downloading
         if (selectedRaster === 'wave') {
-            const waveUrl = showing.tiff.waveUrl;
+            const waveUrl = currentWaterLayer.tiff.waveUrl;
 
             // Check if wave file actually exists before render
             try {
@@ -361,11 +381,11 @@ function prepareItems() {
             // Mimic object for water elevation level using 0-9 scale
             const waveObject = {
                 tiff: {
-                    ...showing.tiff,
+                    ...currentWaterLayer.tiff,
                     url: waveUrl,
                     min: 0, 
-                    max: 9, 
-                    description: showing.tiff.description,
+                    max: 15, 
+                    description: currentWaterLayer.tiff.description,
                 }, 
                 layer: undefined, 
                 rendered: false, 
@@ -373,15 +393,15 @@ function prepareItems() {
             }; // waveObject
             await showLayer(waveObject, false);
             // Fixing legend scale - need to update?
-            updateMinMax(0, 9); // Force legend update for wave height raster layer
+            updateMinMax(0, 15); // Force legend update for wave height raster layer
         } else {
             // Change raster layer back to water elevation
             clickPointObject.file = null;
             clickPointObject.image = null;
-            clickPointObject.url_to_geotiff_file = waterRasterBackup.tiff.url;
-            await showLayer(waterRasterBackup, false);
+            clickPointObject.url_to_geotiff_file = currentWaterLayer.tiff.url;
+            await showLayer(currentWaterLayer, false);
             // Restore water elevation scale in legend
-            updateMinMax(waterRasterBackup.tiff.min, waterRasterBackup.tiff.max);
+            updateMinMax(currentWaterLayer.tiff.min, currentWaterLayer.tiff.max);
         } // if-else
     }); // event-listener for raster layer tiff
 }
