@@ -1,20 +1,23 @@
 var started = false;
-
 let showing;
+
+// Loops through tiff-1 to tiff-5 + attach change listeners
 function addDropdowns() {
-    console.log("Running addDropdowns"); 
+    // Debug check
+    console.log("Running addDropdowns");
+    // tiff-6 excluded 
     let dropdowns = ["tiff-1","tiff-2","tiff-3","tiff-4","tiff-5"];
 
     for (let i = 0; i < dropdowns.length; i++) {
         let item = document.getElementById(dropdowns[i]);
         // Event listener for tiff-1 from Bret: Hurricane vs. Daily Forecast
         item.addEventListener("change", function() {
-            // Dispatching React custom event based on H or DF selection to communicate with Calendar component
+            // Dispatching React custom event based on Hurricane or Daily Forecast selection to communicate with Calendar component
             if (i === 0) {
                 let value = this.value;
                 if (value === "Hurricane" || value === "Daily Forecast") {
                     document.body.dispatchEvent(new CustomEvent('modeChange', {detail: {mode: value}}));
-                    // Update for difference between H and DF modes
+                    // Update for difference between Hurricane and Daily Forecast modes
                     if (value === "Daily Forecast") {
                         // Hide all cascading dropdowns except cycle for DF
                         document.getElementById("tiff-2").classList.add("closed-dropdown");
@@ -47,7 +50,7 @@ function addDropdowns() {
                 } // if 
             } // if 
 
-            // Bret code before:
+            // Bret code before: build array of all selected values
             let nl = [];
             for (let j = 0; j <= i; j++) {
                 let suspect = document.getElementById(dropdowns[j]);
@@ -60,6 +63,7 @@ function addDropdowns() {
         showdrops([]);
     }
 
+    //F ilters overLayers to find all layers whose position[] matches current dropdown selections
     function addDrop(input) {
         let met = [];
         for (let i = 0; i < overLayers.length; i++) {
@@ -73,6 +77,7 @@ function addDropdowns() {
                 met.push(overLayers[i]);
             }
         }
+        // Collects unique values for next dropdown level from amtched layers
         let output = [];
         for (let i = 0; i < met.length; i++) {
             let nep = met[i].tiff.position[input.length];
@@ -84,7 +89,7 @@ function addDropdowns() {
             showLayer(met[0], false);
         }
         
-        // Sort
+        // SBubble sort in descending order for advisory numbers
         for (let i = 0; i < output.length - 1; i++) {
             for (let j = i + 1; j < output.length; j++) {
                 if (output[i] < output[j]) {
@@ -96,6 +101,8 @@ function addDropdowns() {
         }
         return output;
     }
+
+    // Rebuild dropdown UI after each selection
     function showdrops(input) {
         for (let i = 0; i < dropdowns.length; i++) {
             let item = document.getElementById(dropdowns[i]);
@@ -136,6 +143,7 @@ function addDropdowns() {
     }
 }
 
+// Remove currently displayed layer before rendering new layers/markers
 async function showLayer(input, customMinMax) {
     console.log(input);
     // Remove
@@ -167,7 +175,7 @@ async function showLayer(input, customMinMax) {
     if (!customMinMax) {
         updateMinMax(input.tiff.min, input.tiff.max);
     }
-
+    // Hurricane cone
     if (input.tiff.hurricaneLayer != null) {
         input.tiff.hurricaneLayer.hurrLayer.addTo(hurricaneLayer);
         console.log(input.tiff.hurricaneLayer.hulls);
@@ -188,19 +196,23 @@ async function doAll() {
     }
 }
 
+// Set up map, base layers, legend
 function prepareItems() {
+    // Set up map, base layers, legend
     prepare();
 
     overLayers = [];
+    // Wrap every tiffList item in a Layer object
     for (let i = 0; i < tiffList.length; i++) {
         let layer = new Layer(tiffList[i], "overlay", undefined, tiffList[i].hurricaneLayer);
         overLayers.push(layer);
     }
     // Ensuring that cascading menu works only after dropdowns exist in DOM
     setTimeout(() => addDropdowns(), 0);
+    // Set up NOAA stations
     addMarkers();
 
-    // Automatically render most recent Daily Forecast by retrieving the DF info as a list and finding most recent DF item out of DF list
+    // Automatically render most recent Daily Forecast by retrieving info as a list and finding most recent item out of list
     let dailyForecastList = overLayers.filter(layer => layer.tiff.type != "hurricane");
     // Find most recent date out of the DF list 
     dailyForecastList.sort((a, b) => b.tiff.date - a.tiff.date);
@@ -219,7 +231,7 @@ function prepareItems() {
         document.getElementById("tiff-6").classList.add("closed-dropdown");
         activeRasterLayer = 'water';
 
-        // Find all DF match for user selected date - including different DF cycles
+        // Find all Daily Forecast layers matching user selected date - including different cycles (00, 06, 12, 18)
         let DFmatches = overLayers.filter(layer => {
             if (layer.tiff.type !== "hurricane") {
                 // Compare dates (year, month, day, hour)
@@ -229,9 +241,10 @@ function prepareItems() {
             return false;
         }); // DF match
 
-        // Check 
+        // Debug check 
         console.log("DFmatches found:", DFmatches.length);
         
+        // Populate tiff-4 w/ cycles for user selected date in ascending order
         if (DFmatches.length > 0) {
             // Check
             console.log("Populating tiff-4 dropdown"); 
@@ -265,7 +278,7 @@ function prepareItems() {
         } // if
     }); // event-listener 
 
-    // Event listener for DF dates to Calendar when DF selected
+    // Event listener for Daily Forecast dates to Calendar when Daily Forecast mode selected
     document.body.addEventListener('modeChange', function(e) {
         if (e.detail.mode === "Daily Forecast") {
             // Get all DF dates
@@ -279,7 +292,7 @@ function prepareItems() {
         } // if 
     }); // event-listener
 
-    // Event listener for no DF data available for selected date
+    // Event listener for no Daily Forecast data available for selected date
     document.body.addEventListener('noDataPopup', function(e) {
         let selectedDate = e.detail.date;
         let dateStr = selectedDate.toLocaleDateString();
@@ -292,18 +305,7 @@ function prepareItems() {
             .openOn(map);
     }); // event-listener 
 
-    // BEFORE CHANGE:
-    // Event-listener for time/cycle selection for DF
-    // document.getElementById("tiff-4").addEventListener("change", function() {
-    //     let selectedIndex = this.options[this.selectedIndex].dataset.layerIndex;
-    //     if (selectedIndex) {
-    //         let layer = overLayers[selectedIndex];
-    //         showLayer(layer, false);
-    //     } // if 
-    // }); // event-listener
-    // END BEFORE
-    
-    // Event-listener for time/cycle selection for DF mode
+    // Event-listener for time/cycle selection for Daily Forecast mode
     // Reset active raster layer dropdown to Peak Water Level & show layer dropdown
     document.getElementById("tiff-4").addEventListener("change", function() {
         let selectedIndex = this.options[this.selectedIndex].dataset.layerIndex;
@@ -316,9 +318,9 @@ function prepareItems() {
             tiff6.classList.remove("closed-dropdown");
             activeRasterLayer = 'water';
         } // if 
-    }); // event-listener for cycle tiff
+    }); // event-listener for cycle tiff-4
 
-    // Event-listener for raster layer selection for DF mode
+    // Event-listener for raster layer selection for Daily Forecast mode
     document.getElementById("tiff-6").addEventListener("change", async function () {
         // Ensure only active in Daily Forecast mode
         if (document.getElementById("tiff-1").value !== "Daily Forecast" || !showing) return;
@@ -327,7 +329,7 @@ function prepareItems() {
         activeRasterLayer = selectedRaster;
         // Always capture before any showLayer call
         const waterRasterBackup = showing;
-
+        // HEAD request to check if swan_HS_max.tif exists w/o downloading
         if (selectedRaster === 'wave') {
             const waveUrl = showing.tiff.waveUrl;
 
@@ -349,9 +351,6 @@ function prepareItems() {
                 return;
             } // try-catch
 
-            // Store showLayer before
-            const waterRasterBackup = showing;
-
             // Mimic object for water elevation level using 0-9 scale
             const waveObject = {
                 tiff: {
@@ -366,7 +365,7 @@ function prepareItems() {
                 hurricaneLayer: null, 
             }; // waveObject
             await showLayer(waveObject, false);
-            // Fixing legend scale 
+            // Fixing legend scale - need to update?
             updateMinMax(0, 9); // Force legend update for wave height raster layer
         } else {
             // Change raster layer back to water elevation
@@ -380,11 +379,12 @@ function prepareItems() {
     }); // event-listener for raster layer tiff
 }
 
+// Old loading path using addTifLayers() and tiffList.json - dead code?
 function doNextStep() {
     Promise.all(addTifLayers()).then(function() {
         addDropdowns();
     })
     addMarkers();
 }
-
+// App component dispatches beginProcess after mounting to trigger data loading
 document.body.addEventListener("beginProcess", doAll);
