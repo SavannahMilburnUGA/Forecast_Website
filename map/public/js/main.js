@@ -352,23 +352,22 @@ function prepareItems() {
             // Store showLayer before
             const waterRasterBackup = showing;
 
-            // Mimic object for water elevation level 
-            // Used min 0 and max 20 ?
+            // Mimic object for water elevation level using 0-9 scale
             const waveObject = {
                 tiff: {
                     ...showing.tiff,
                     url: waveUrl,
                     min: 0, 
-                    max: 20, 
+                    max: 9, 
                     description: showing.tiff.description,
                 }, 
                 layer: undefined, 
                 rendered: false, 
                 hurricaneLayer: null, 
             }; // waveObject
-            await showLayer(waterRasterBackup, false);
+            await showLayer(waveObject, false);
             // Fixing legend scale 
-            updateMinMax(0, 20); // Force legend update for wave height raster layer
+            updateMinMax(0, 9); // Force legend update for wave height raster layer
         } else {
             // Change raster layer back to water elevation
             clickPointObject.file = null;

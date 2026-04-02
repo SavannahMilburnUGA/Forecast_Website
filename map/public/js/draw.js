@@ -23,6 +23,8 @@ function addMap() {
 }
 
 async function clickPoint(event, bounds) {
+    // Checking
+    console.log("clickPoint fired");
     let latlng = map.mouseEventToLatLng(event.originalEvent);
 
     let file = clickPointObject.file;
@@ -35,17 +37,29 @@ async function clickPoint(event, bounds) {
         image = await file.getImage();
         clickPointObject.image = image;
     }
-
-    const longitude = (latlng.lng * 20037508.34 / 180);
-    const latitude = (Math.log(Math.tan((90 + latlng.lat) * Math.PI / 360)) / (Math.PI / 180)) * (20037508.34 / 180);
-
+    //
     const bbox = image.getBoundingBox();
-
     const pixelWidth = image.getWidth();
     const pixelHeight = image.getHeight();
+    // Detect CRS based on bbox range: EPSG: 3857 for maxele.tif and EPSG: 4269 for swan_HS_max.tif
+    // EPSG: 4269 (swan_HS_max.tif) uses -180 to 180 bounding box range
+    const isEPSG4269 = Math.abs(bbox[0]) < 1000;
 
+    let longitude, latitude;
+    if (isEPSG4269) {
+        // swan_HS_max.tif uses EPSG 4269 so use raw degrees directly 
+        longitude = latlng.lng;
+        latitude = latlng.lat; 
+    } else {
+        // maxele.tif uses EPSG 3857 so convert degrees to Web Mercator meters
+        longitude = (latlng.lng * 20037508.34 / 180);
+        latitude = (Math.log(Math.tan((90 + latlng.lat) * Math.PI / 360)) / (Math.PI / 180)) * (20037508.34 / 180);
+    }
+    // Bret code for maxele.tif
     let partX = pixelWidth*(longitude - bbox[0])/(bbox[2] - bbox[0]);
     let partY = pixelHeight*(1 - (latitude - bbox[1])/(bbox[3] - bbox[1]));
+    // End Bret code for maxele.tif
+
     const xPx = Math.floor(partX + 0.5);
     const yPx = Math.floor(partY + 0.5);
 
@@ -57,26 +71,27 @@ async function clickPoint(event, bounds) {
     });
 
     let height = data[0][0];
+    // Check
+    console.log("Raw height value:", height);
 
     if (isNaN(height) || height <= -99999 || height > 9e36) {
         //
     } else {
-        console.log("User clicked at (" + latlng.lng + "E, " + latlng.lat + "N)\nWater elevation: " + height);
-        let popup = L.popup([latlng.lat, latlng.lng],
-            {
-                // closeOnClick: false,
-                // autoClose: false,
-                autoPan: false,
-            })
+        // Deriving label & units from activeRasterLayer variable (Water Elevation vs. Wave Height)
+        const isWaveLayer = activeRasterLayer === 'wave';
+        const popupValueLabel = isWaveLayer ? 'Wave Height' : 'Water Elevation';
+        const popupValueUnits = isWaveLayer ? 'ft' : 'ft NAVD88';
+
+        // Debug for popup
+        console.log("User clicked at (" + latlng.lng + "E, " + latlng.lat + "N)\n" + popupValueLabel + ": " + height);
+
+        let popup = L.popup([latlng.lat, latlng.lng], { autoPan: false,})
             // Adding more data to pop-up when clicking directly on hurricane markers - will NOT display if not on marker
             .setContent((() => {
-                // Get the hurricane data if selected
-                let hurricaneItem = showing && showing.tiff && showing.tiff.trackData ? showing.tiff : null;
-                // Deriving label & units from activeRasterLayer variable (Water Elevation vs. Wave Height)
-                const isWaveLayer = activeRasterLayer === 'wave';
-                const popupValueLabel = isWaveLayer ? 'Wave Height' : 'Water Elevation';
-                const popupValueUnits = isWaveLayer ? 'ft' : 'ft NAVD88';
-
+                // Removing hurricaneItem may be dead code:
+                // // Get the hurricane data if selected
+                // let hurricaneItem = showing && showing.tiff && showing.tiff.trackData ? showing.tiff : null;
+                
                 // Dynamic popup data displayed: Lat/Long & either Water Elevation/Wave Height dynamically labeled from activeRasterLayer variable
                 let popupData = 
                     `<span class="popup-label">Location:</span> (${Math.round(100*latlng.lng)/100}, ${Math.round(100*latlng.lat)/100})<br>
@@ -88,6 +103,8 @@ async function clickPoint(event, bounds) {
 }
 
 async function drawFirstTime(inputTiff, customMinMax) {
+    // Check
+    console.log("drawFirstTime called, url:", inputTiff.tiff.url); 
     let url_to_geotiff_file = inputTiff.tiff.url;
     let georaster = await parseGeoraster(url_to_geotiff_file);
     // Colors height appropriately
