@@ -73,7 +73,7 @@ const CalendarInput = () => {
 
 
     return (
-        <div style={{position: 'relative', zIndex: 10000, pointerEvents: 'auto'}} onClick={(e) => {e.stopPropagagation();}}>
+        <div style={{position: 'relative', zIndex: 10000, pointerEvents: 'auto'}} onClick={(e) => {e.stopPropagation();}}>
             <button onClick={() => setIsCalOpen(!isCalOpen)}
                 style={{
                     padding: '1% 2%',

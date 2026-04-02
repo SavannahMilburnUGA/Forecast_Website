@@ -26,14 +26,14 @@ function addDropdowns() {
                         document.getElementById("tiff-3").classList.add("closed-dropdown");
                         document.getElementById("tiff-5").classList.add("closed-dropdown");
                         // Clear other dropdowns of options so they don't appear
-                        while (tiff2.options.length > 0) {
-                            tiff2.remove(0);
+                        while (document.getElementById("tiff-2").options.length > 0) {
+                            document.getElementById("tiff-2").remove(0);
                         } // while
-                        while (tiff3.options.length > 0) {
-                            tiff3.remove(0);
+                        while (document.getElementById("tiff-3").options.length > 0) {
+                            document.getElementById("tiff-3").remove(0);
                         } // while
-                        while (tiff5.options.length > 0) {
-                            tiff5.remove(0);
+                        while (document.getElementById("tiff-5").options.length > 0) {
+                            document.getElementById("tiff-5").remove(0);
                         } // while
                         // Hiding raster layer dropdown if in hurricane mode
                         document.getElementById("tiff-6").classList.add("closed-dropdown");
